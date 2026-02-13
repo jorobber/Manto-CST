@@ -12,13 +12,20 @@ type DashboardResponse = ReturnType<typeof localService.getDashboardSummary>;
 export default function DashboardPage() {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState<DashboardResponse | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const load = () => {
       setLoading(true);
-      localService.initialize();
-      setData(localService.getDashboardSummary());
-      setLoading(false);
+      try {
+        localService.initialize();
+        setData(localService.getDashboardSummary());
+        setError(null);
+      } catch (loadError) {
+        setError(String(loadError));
+      } finally {
+        setLoading(false);
+      }
     };
 
     load();
@@ -44,6 +51,12 @@ export default function DashboardPage() {
         )}
       </section>
 
+      {error ? (
+        <GlassCard>
+          <p className="text-sm text-danger">{error}</p>
+        </GlassCard>
+      ) : null}
+
       <GlassCard>
         <div className="flex items-center justify-between">
           <h2 className="text-lg font-semibold">Ordenes pendientes</h2>
@@ -63,7 +76,7 @@ export default function DashboardPage() {
                 {order.workorderNumber} · {order.truckNumber}
               </p>
               <p className="text-sm text-muted">
-                {order.maintenanceName} · Due @{order.dueAtOdometer} mi
+                {order.maintenanceName} · Due @{order.dueAtWorkedHours} h
               </p>
               <p className="text-xs text-muted">Creada: {formatDate(order.createdAt)}</p>
             </motion.article>

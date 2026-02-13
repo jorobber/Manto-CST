@@ -20,7 +20,7 @@ export default function OrdersPage() {
     "ALL"
   );
   const [selected, setSelected] = useState<WorkOrder | null>(null);
-  const [odometerAtService, setOdometerAtService] = useState("");
+  const [workedHoursAtService, setWorkedHoursAtService] = useState("");
   const [notes, setNotes] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,12 +64,12 @@ export default function OrdersPage() {
     try {
       localService.completeWorkOrder({
         workOrderId: selected.id,
-        odometerAtService: Number(odometerAtService),
+        workedHoursAtService: Number(workedHoursAtService),
         notes: notes || undefined
       });
 
       setSelected(null);
-      setOdometerAtService("");
+      setWorkedHoursAtService("");
       setNotes("");
       await load();
     } catch (completeError) {
@@ -77,20 +77,38 @@ export default function OrdersPage() {
     }
   };
 
+  const revertOrder = async (id: string) => {
+    const reason = window.prompt("Motivo de reversa (mínimo 8 caracteres)");
+    if (!reason) return;
+
+    try {
+      localService.revertCompletedWorkOrder({ workOrderId: id, reason });
+      await load();
+    } catch (revertError) {
+      setError(String(revertError));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <GlassCard>
         <div className="flex items-center gap-2 overflow-x-auto pb-1">
-          {["ALL", "PENDING", "IN_PROGRESS", "COMPLETED", "CANCELLED"].map((item) => (
+          {[
+            { id: "ALL", label: "TODAS" },
+            { id: "PENDING", label: "PEND" },
+            { id: "IN_PROGRESS", label: "EN CURSO" },
+            { id: "COMPLETED", label: "COMP" },
+            { id: "CANCELLED", label: "CANC" }
+          ].map((item) => (
             <button
-              key={item}
+              key={item.id}
               className={`tap-target rounded-full px-3 py-2 text-xs ${
-                status === item ? "bg-primary text-white" : "bg-white/55 text-muted dark:bg-slate-900/35"
+                status === item.id ? "bg-primary text-white" : "bg-white/55 text-muted dark:bg-slate-900/35"
               }`}
-              onClick={() => setStatus(item as typeof status)}
+              onClick={() => setStatus(item.id as typeof status)}
               type="button"
             >
-              {item}
+              {item.label}
             </button>
           ))}
         </div>
@@ -124,9 +142,11 @@ export default function OrdersPage() {
                   </div>
                   <span className={`text-xs font-medium ${tone(order.visualState)}`}>
                     {order.visualState}
-                    {order.overdueMiles > 0 ? ` +${order.overdueMiles} mi` : ""}
+                    {order.overdueHours > 0 ? ` +${order.overdueHours} h` : ""}
                   </span>
                 </div>
+
+                <p className="mt-1 text-xs text-muted">Vence en: {order.dueAtWorkedHours} h acumuladas</p>
 
                 {(order.status === "PENDING" || order.status === "IN_PROGRESS") && (
                   <div className="mt-3 grid grid-cols-2 gap-2">
@@ -144,7 +164,7 @@ export default function OrdersPage() {
                         className="tap-target rounded-xl bg-primary px-3 py-2 text-sm text-white"
                         onClick={() => {
                           setSelected(order);
-                          setOdometerAtService(String(order.truck.currentOdometer));
+                          setWorkedHoursAtService(String(order.truck.currentWorkedHours));
                         }}
                       >
                         Completar
@@ -158,6 +178,16 @@ export default function OrdersPage() {
                     </a>
                   </div>
                 )}
+
+                {order.canRevert ? (
+                  <button
+                    type="button"
+                    onClick={() => revertOrder(order.id)}
+                    className="tap-target mt-3 w-full rounded-xl bg-danger px-3 py-2 text-sm font-medium text-white"
+                  >
+                    Revertir cierre (Admin)
+                  </button>
+                ) : null}
               </GlassCard>
             </motion.article>
           ))
@@ -169,7 +199,7 @@ export default function OrdersPage() {
           <>
             <motion.button
               type="button"
-              className="fixed inset-0 z-40 bg-black/30"
+              className="fixed inset-0 z-[60] bg-black/30"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -180,7 +210,7 @@ export default function OrdersPage() {
               animate={{ y: 0 }}
               exit={{ y: 280 }}
               transition={{ duration: 0.26 }}
-              className="glass fixed inset-x-0 bottom-0 z-50 mx-auto w-[min(100%,540px)] rounded-t-3xl border p-4"
+              className="glass fixed inset-x-0 bottom-0 z-[70] mx-auto max-h-[82vh] w-[min(100%,540px)] overflow-y-auto rounded-t-3xl border p-4 pb-24"
             >
               <h3 className="text-lg font-semibold">Completar {selected.workorderNumber}</h3>
               <p className="text-sm text-muted">
@@ -190,9 +220,10 @@ export default function OrdersPage() {
               <div className="mt-3 space-y-2">
                 <input
                   type="number"
+                  step="0.1"
                   className="tap-target w-full rounded-2xl border border-white/40 bg-white/50 px-3 py-3 text-base outline-none dark:border-white/10 dark:bg-slate-900/40"
-                  value={odometerAtService}
-                  onChange={(event) => setOdometerAtService(event.target.value)}
+                  value={workedHoursAtService}
+                  onChange={(event) => setWorkedHoursAtService(event.target.value)}
                 />
                 <input
                   type="text"

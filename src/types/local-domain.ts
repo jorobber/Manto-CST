@@ -6,6 +6,7 @@ export type User = {
   id: string;
   name: string;
   email: string;
+  password: string;
   role: UserRole;
   createdAt: string;
 };
@@ -17,6 +18,7 @@ export type Truck = {
   model: string;
   year: number;
   currentOdometer: number;
+  currentWorkedHours: number;
   status: TruckStatus;
   createdAt: string;
   updatedAt: string;
@@ -27,7 +29,22 @@ export type YardEntry = {
   truckId: string;
   datetime: string;
   odometer: number;
-  computedDelta: number;
+  computedDeltaMiles: number;
+  yardEntryAt: string;
+  yardExitAt: string;
+  workedHours: number;
+  recordedById: string;
+  notes?: string;
+  photoUrl?: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type OpenYardEntry = {
+  id: string;
+  truckId: string;
+  odometer: number;
+  yardEntryAt: string;
   recordedById: string;
   notes?: string;
   photoUrl?: string;
@@ -38,8 +55,8 @@ export type YardEntry = {
 export type MaintenanceType = {
   id: string;
   name: string;
-  intervalMiles: number;
-  warningBeforeMiles: number;
+  intervalHours: number;
+  warningBeforeHours: number;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
@@ -49,7 +66,7 @@ export type TruckMaintenanceState = {
   id: string;
   truckId: string;
   maintenanceTypeId: string;
-  lastServiceOdometer: number;
+  lastServiceWorkedHours: number;
   lastServiceAt?: string;
   createdAt: string;
   updatedAt: string;
@@ -63,7 +80,7 @@ export type WorkOrder = {
   maintenanceTypeId: string;
   status: WorkOrderStatus;
   createdAt: string;
-  dueAtOdometer: number;
+  dueAtWorkedHours: number;
   completedAt?: string;
   assignedToId?: string;
   createdFromEntryId?: string;
@@ -76,10 +93,27 @@ export type ServiceHistory = {
   maintenanceTypeId: string;
   workorderId: string;
   performedAt: string;
-  odometerAtService: number;
+  workedHoursAtService: number;
+  odometerAtService?: number;
   performedById: string;
   notes?: string;
   attachmentUrl?: string;
+};
+
+export type TruckDocument = {
+  id: string;
+  truckId: string;
+  documentName: string;
+  startDate: string;
+  expirationDate: string;
+  fileName: string;
+  fileDataUrl: string;
+  mimeType: string;
+  fileSizeBytes: number;
+  uploadedById: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type AuditLog = {
@@ -100,12 +134,14 @@ export type LocalDbState = {
   users: User[];
   trucks: Truck[];
   yardEntries: YardEntry[];
+  openYardEntries: OpenYardEntry[];
   maintenanceTypes: MaintenanceType[];
   truckMaintenanceStates: TruckMaintenanceState[];
   workOrders: WorkOrder[];
   serviceHistory: ServiceHistory[];
+  truckDocuments: TruckDocument[];
   auditLogs: AuditLog[];
-  currentActorId: string;
+  currentActorId: string | null;
 };
 
 export type HealthState = "OK" | "DUE_SOON" | "DUE" | "OVERDUE";

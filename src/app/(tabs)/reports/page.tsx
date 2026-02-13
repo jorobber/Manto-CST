@@ -61,7 +61,7 @@ export default function ReportsPage() {
 
   const exportCsv = () => {
     const csv = localService.exportDetailCsv(query);
-    downloadFile(`maintenance-${Date.now()}.csv`, csv, "text/csv;charset=utf-8");
+    downloadFile(`maintenance-hours-${Date.now()}.csv`, csv, "text/csv;charset=utf-8");
   };
 
   const exportPdf = () => {
@@ -69,7 +69,7 @@ export default function ReportsPage() {
     const html = `
       <html>
         <head>
-          <title>Reporte de mantenimiento</title>
+          <title>Reporte de mantenimiento por horas</title>
           <style>
             body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; padding: 24px; }
             h1 { margin: 0 0 8px; }
@@ -79,16 +79,16 @@ export default function ReportsPage() {
           </style>
         </head>
         <body>
-          <h1>Reporte de mantenimiento</h1>
+          <h1>Reporte de mantenimiento por horas</h1>
           <table>
             <thead>
-              <tr><th>Fecha</th><th>Camion</th><th>Servicio</th><th>Odometro</th><th>Usuario</th><th>Orden</th></tr>
+              <tr><th>Fecha</th><th>Camion</th><th>Servicio</th><th>Horas</th><th>Usuario</th><th>Orden</th></tr>
             </thead>
             <tbody>
               ${rows
                 .map(
                   (row) =>
-                    `<tr><td>${new Date(row.date).toLocaleString()}</td><td>${row.truck}</td><td>${row.service}</td><td>${row.odometer}</td><td>${row.user}</td><td>${row.workorderNumber}</td></tr>`
+                    `<tr><td>${new Date(row.date).toLocaleString()}</td><td>${row.truck}</td><td>${row.service}</td><td>${row.workedHours}</td><td>${row.user}</td><td>${row.workorderNumber}</td></tr>`
                 )
                 .join("")}
             </tbody>
@@ -181,10 +181,10 @@ export default function ReportsPage() {
                 <p className="text-muted">Engrases: {item.engrases.count}</p>
                 <p className="text-muted">Aceite: {item.cambiosAceite.count}</p>
                 <p className="text-muted">
-                  Ultimo servicio: {item.lastService ? `${item.lastService.service} (${item.lastService.odometer} mi)` : "N/A"}
+                  Ultimo servicio: {item.lastService ? `${item.lastService.service} (${item.lastService.workedHours} h)` : "N/A"}
                 </p>
                 <p className="text-muted">
-                  Proximo: {item.nextMaintenance ? `${item.nextMaintenance.maintenanceType} · ${item.nextMaintenance.remainingMiles} mi` : "N/A"}
+                  Proximo: {item.nextMaintenance ? `${item.nextMaintenance.maintenanceType} · ${item.nextMaintenance.remainingHours} h` : "N/A"}
                 </p>
               </article>
             ))
@@ -201,7 +201,7 @@ export default function ReportsPage() {
                 {row.truck} · {row.service}
               </p>
               <p className="text-muted">
-                {formatDate(row.date)} · {row.odometer} mi · {row.user} · {row.workorderNumber}
+                {formatDate(row.date)} · {row.workedHours} h · {row.user} · {row.workorderNumber}
               </p>
             </article>
           ))}

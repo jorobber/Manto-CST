@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { Search } from "lucide-react";
+import { Plus, Search } from "lucide-react";
 import { GlassCard } from "@/components/glass-card";
 import { localService } from "@/lib/local/service";
 
@@ -16,10 +16,27 @@ function percent(value: number) {
 export default function TrucksPage() {
   const [trucks, setTrucks] = useState<TruckItem[]>([]);
   const [query, setQuery] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [sessionRole, setSessionRole] = useState<string | null>(null);
+
+  const [truckNumber, setTruckNumber] = useState("");
+  const [brand, setBrand] = useState("");
+  const [model, setModel] = useState("");
+  const [year, setYear] = useState(String(new Date().getFullYear()));
+
+  const load = () => {
+    localService.initialize();
+    const session = localService.getSessionUser();
+    setSessionRole(session?.role ?? null);
+    setTrucks(localService.getTrucks());
+  };
 
   useEffect(() => {
-    localService.initialize();
-    setTrucks(localService.getTrucks());
+    try {
+      load();
+    } catch (loadError) {
+      setError(String(loadError));
+    }
   }, []);
 
   const filtered = useMemo(() => {
@@ -33,8 +50,73 @@ export default function TrucksPage() {
     );
   }, [trucks, query]);
 
+  const createTruck = () => {
+    try {
+      localService.createTruck({
+        truckNumber,
+        brand,
+        model,
+        year: Number(year)
+      });
+
+      setTruckNumber("");
+      setBrand("");
+      setModel("");
+      setYear(String(new Date().getFullYear()));
+      setError(null);
+      load();
+    } catch (createError) {
+      setError(String(createError));
+    }
+  };
+
   return (
     <div className="space-y-4">
+      {sessionRole === "ADMIN" ? (
+        <GlassCard>
+          <h2 className="text-sm font-semibold uppercase tracking-[0.15em] text-muted">Admin</h2>
+          <p className="mt-1 text-base font-semibold">Crear nuevo camión</p>
+          <div className="mt-3 grid grid-cols-2 gap-2">
+            <input
+              type="text"
+              placeholder="TRK-003"
+              value={truckNumber}
+              onChange={(event) => setTruckNumber(event.target.value)}
+              className="tap-target rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm outline-none dark:border-white/10 dark:bg-slate-900/40"
+            />
+            <input
+              type="number"
+              placeholder="2022"
+              value={year}
+              onChange={(event) => setYear(event.target.value)}
+              className="tap-target rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm outline-none dark:border-white/10 dark:bg-slate-900/40"
+            />
+            <input
+              type="text"
+              placeholder="Marca"
+              value={brand}
+              onChange={(event) => setBrand(event.target.value)}
+              className="tap-target rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm outline-none dark:border-white/10 dark:bg-slate-900/40"
+            />
+            <input
+              type="text"
+              placeholder="Modelo"
+              value={model}
+              onChange={(event) => setModel(event.target.value)}
+              className="tap-target rounded-xl border border-white/40 bg-white/50 px-3 py-2 text-sm outline-none dark:border-white/10 dark:bg-slate-900/40"
+            />
+          </div>
+
+          <button
+            type="button"
+            onClick={createTruck}
+            className="tap-target mt-2 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-medium text-white dark:bg-primary"
+          >
+            <Plus size={16} /> Crear camión
+          </button>
+        </GlassCard>
+      ) : null}
+
       <GlassCard>
         <label className="flex items-center gap-2 rounded-2xl border border-white/50 bg-white/50 px-3 py-2 dark:border-white/10 dark:bg-slate-900/35">
           <Search size={16} className="text-muted" />
@@ -48,21 +130,27 @@ export default function TrucksPage() {
         </label>
       </GlassCard>
 
+      {error ? (
+        <GlassCard>
+          <p className="text-sm text-danger">{error}</p>
+        </GlassCard>
+      ) : null}
+
       <section className="space-y-3">
         {filtered.map((truck, index) => {
           const nearest = truck.maintenanceStates
             .map((state) => {
-              const milesSince = truck.currentOdometer - state.lastServiceOdometer;
-              const completion = percent((milesSince / state.maintenanceType.intervalMiles) * 100);
-              const remaining = state.maintenanceType.intervalMiles - milesSince;
+              const hoursSince = truck.currentWorkedHours - state.lastServiceWorkedHours;
+              const completion = percent((hoursSince / state.maintenanceType.intervalHours) * 100);
+              const remainingHours = state.maintenanceType.intervalHours - hoursSince;
 
               return {
                 maintenanceName: state.maintenanceType.name,
                 completion,
-                remaining
+                remainingHours
               };
             })
-            .sort((a, b) => a.remaining - b.remaining)[0];
+            .sort((a, b) => a.remainingHours - b.remainingHours)[0];
 
           return (
             <motion.article
@@ -76,11 +164,11 @@ export default function TrucksPage() {
                   <div className="flex items-center justify-between">
                     <h3 className="text-lg font-semibold">{truck.truckNumber}</h3>
                     <span className="rounded-full bg-white/45 px-2 py-1 text-xs text-muted dark:bg-slate-900/30">
-                      {truck.currentOdometer} mi
+                      {truck.currentWorkedHours} h
                     </span>
                   </div>
                   <p className="text-sm text-muted">
-                    {truck.brand} {truck.model} · {truck.year}
+                    {truck.brand} {truck.model} · {truck.year} · Odom {truck.currentOdometer} mi
                   </p>
 
                   {nearest ? (
@@ -95,9 +183,9 @@ export default function TrucksPage() {
                         />
                       </div>
                       <p className="mt-1 text-xs text-muted">
-                        {nearest.remaining <= 0
-                          ? `Atrasado ${Math.abs(nearest.remaining)} mi`
-                          : `Faltan ${nearest.remaining} mi`}
+                        {nearest.remainingHours <= 0
+                          ? `Atrasado ${Math.abs(nearest.remainingHours)} h`
+                          : `Faltan ${roundToOne(nearest.remainingHours)} h`}
                       </p>
                     </div>
                   ) : null}
@@ -109,4 +197,8 @@ export default function TrucksPage() {
       </section>
     </div>
   );
+}
+
+function roundToOne(value: number) {
+  return Math.round(value * 10) / 10;
 }

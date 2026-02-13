@@ -15,12 +15,16 @@ export default function TruckDetailPage() {
   const [error, setError] = useState<string | null>(null);
   const [reasonByEntry, setReasonByEntry] = useState<Record<string, string>>({});
   const [valueByEntry, setValueByEntry] = useState<Record<string, string>>({});
+  const [adjustOdometer, setAdjustOdometer] = useState("");
+  const [adjustReason, setAdjustReason] = useState("");
 
   const load = async () => {
     setLoading(true);
     try {
       localService.initialize();
-      setData(localService.getTruckById(params.id));
+      const detail = localService.getTruckById(params.id);
+      setData(detail);
+      setAdjustOdometer(String(detail.currentOdometer));
       setError(null);
     } catch (loadError) {
       setError(String(loadError));
@@ -46,6 +50,21 @@ export default function TruckDetailPage() {
     }
   };
 
+  const adjustTruckOdometer = async () => {
+    if (!data) return;
+    try {
+      localService.updateTruckCurrentOdometer({
+        truckId: data.id,
+        odometer: Number(adjustOdometer),
+        reason: adjustReason
+      });
+      setAdjustReason("");
+      await load();
+    } catch (adjustError) {
+      setError(String(adjustError));
+    }
+  };
+
   if (loading) {
     return (
       <div className="space-y-3">
@@ -67,21 +86,52 @@ export default function TruckDetailPage() {
           {data.brand} {data.model} {data.year}
         </p>
         <p className="mt-2 text-sm">Odometro actual: {data.currentOdometer} mi</p>
+        <p className="text-sm">Horas acumuladas: {data.currentWorkedHours} h</p>
       </GlassCard>
 
+      {data.canAdminManage ? (
+        <GlassCard>
+          <h3 className="text-lg font-semibold">Admin: ajustar odómetro actual</h3>
+          <p className="text-xs text-muted">Este ajuste impacta mantenimientos y recalcula deltas.</p>
+          <div className="mt-3 space-y-2">
+            <input
+              type="number"
+              value={adjustOdometer}
+              onChange={(event) => setAdjustOdometer(event.target.value)}
+              className="tap-target w-full rounded-xl border border-white/40 bg-white/60 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-950/30"
+              placeholder="Nuevo odómetro"
+            />
+            <input
+              type="text"
+              value={adjustReason}
+              onChange={(event) => setAdjustReason(event.target.value)}
+              className="tap-target w-full rounded-xl border border-white/40 bg-white/60 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-950/30"
+              placeholder="Motivo obligatorio"
+            />
+            <button
+              type="button"
+              onClick={adjustTruckOdometer}
+              className="tap-target w-full rounded-xl bg-slate-900 px-3 py-2 text-sm text-white dark:bg-primary"
+            >
+              Guardar ajuste de odómetro
+            </button>
+          </div>
+        </GlassCard>
+      ) : null}
+
       <GlassCard>
-        <h3 className="text-lg font-semibold">Estado de mantenimientos</h3>
+        <h3 className="text-lg font-semibold">Estado de mantenimientos (por horas)</h3>
         <div className="mt-2 space-y-2">
           {data.maintenanceStates.map((state) => {
-            const milesSince = data.currentOdometer - state.lastServiceOdometer;
-            const remaining = state.maintenanceType.intervalMiles - milesSince;
+            const hoursSince = data.currentWorkedHours - state.lastServiceWorkedHours;
+            const remaining = state.maintenanceType.intervalHours - hoursSince;
 
             return (
               <div key={state.id} className="rounded-2xl bg-white/45 p-3 dark:bg-slate-900/35">
                 <p className="text-sm font-medium">{state.maintenanceType.name}</p>
-                <p className="text-xs text-muted">Intervalo: {state.maintenanceType.intervalMiles} mi</p>
+                <p className="text-xs text-muted">Intervalo: {state.maintenanceType.intervalHours} h</p>
                 <p className="text-xs text-muted">
-                  {remaining <= 0 ? `OVERDUE ${Math.abs(remaining)} mi` : `Faltan ${remaining} mi`}
+                  {remaining <= 0 ? `OVERDUE ${Math.abs(remaining)} h` : `Faltan ${roundToOne(remaining)} h`}
                 </p>
               </div>
             );
@@ -96,48 +146,56 @@ export default function TruckDetailPage() {
         <div className="mt-3 space-y-3">
           {data.yardEntries.map((entry) => (
             <article key={entry.id} className="rounded-2xl bg-white/45 p-3 dark:bg-slate-900/35">
-              <p className="text-sm font-medium">{formatDate(entry.datetime)}</p>
+              <p className="text-sm font-medium">Salida: {formatDate(entry.yardExitAt)}</p>
+              <p className="text-xs text-muted">Entrada: {formatDate(entry.yardEntryAt)}</p>
               <p className="text-sm text-muted">
-                Odom: {entry.odometer} · Delta: {entry.computedDelta} · {entry.recordedBy?.name ?? "N/A"}
+                Odom: {entry.odometer} · Delta: {entry.computedDeltaMiles} mi · Horas: {entry.workedHours} h
               </p>
+              <p className="text-xs text-muted">{entry.recordedBy?.name ?? "N/A"}</p>
 
-              <div className="mt-2 space-y-2">
-                <input
-                  type="number"
-                  placeholder="Nuevo odometro"
-                  className="tap-target w-full rounded-xl border border-white/40 bg-white/60 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-950/30"
-                  value={valueByEntry[entry.id] ?? ""}
-                  onChange={(event) =>
-                    setValueByEntry((prev) => ({
-                      ...prev,
-                      [entry.id]: event.target.value
-                    }))
-                  }
-                />
-                <input
-                  type="text"
-                  placeholder="Motivo de correccion"
-                  className="tap-target w-full rounded-xl border border-white/40 bg-white/60 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-950/30"
-                  value={reasonByEntry[entry.id] ?? ""}
-                  onChange={(event) =>
-                    setReasonByEntry((prev) => ({
-                      ...prev,
-                      [entry.id]: event.target.value
-                    }))
-                  }
-                />
-                <button
-                  type="button"
-                  onClick={() => correct(entry.id)}
-                  className="tap-target w-full rounded-xl bg-slate-900 px-3 py-2 text-sm text-white dark:bg-primary"
-                >
-                  Corregir lectura
-                </button>
-              </div>
+              {data.canAdminManage ? (
+                <div className="mt-2 space-y-2">
+                  <input
+                    type="number"
+                    placeholder="Nuevo odometro"
+                    className="tap-target w-full rounded-xl border border-white/40 bg-white/60 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-950/30"
+                    value={valueByEntry[entry.id] ?? ""}
+                    onChange={(event) =>
+                      setValueByEntry((prev) => ({
+                        ...prev,
+                        [entry.id]: event.target.value
+                      }))
+                    }
+                  />
+                  <input
+                    type="text"
+                    placeholder="Motivo de correccion"
+                    className="tap-target w-full rounded-xl border border-white/40 bg-white/60 px-3 py-2 text-sm dark:border-white/10 dark:bg-slate-950/30"
+                    value={reasonByEntry[entry.id] ?? ""}
+                    onChange={(event) =>
+                      setReasonByEntry((prev) => ({
+                        ...prev,
+                        [entry.id]: event.target.value
+                      }))
+                    }
+                  />
+                  <button
+                    type="button"
+                    onClick={() => correct(entry.id)}
+                    className="tap-target w-full rounded-xl bg-slate-900 px-3 py-2 text-sm text-white dark:bg-primary"
+                  >
+                    Corregir lectura
+                  </button>
+                </div>
+              ) : null}
             </article>
           ))}
         </div>
       </GlassCard>
     </div>
   );
+}
+
+function roundToOne(value: number) {
+  return Math.round(value * 10) / 10;
 }

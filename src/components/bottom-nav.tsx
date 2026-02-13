@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { BarChart3, ClipboardPlus, Home, Truck, Wrench } from "lucide-react";
+import { BarChart3, ClipboardPlus, FileText, Home, Truck, Wrench } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 const items = [
@@ -10,6 +10,7 @@ const items = [
   { href: "/register", label: "Registrar", icon: ClipboardPlus },
   { href: "/trucks", label: "Camiones", icon: Truck },
   { href: "/orders", label: "Ordenes", icon: Wrench },
+  { href: "/documents", label: "Docs", icon: FileText },
   { href: "/reports", label: "Reportes", icon: BarChart3 }
 ];
 

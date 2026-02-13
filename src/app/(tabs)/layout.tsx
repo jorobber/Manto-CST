@@ -1,13 +1,24 @@
-import { ActorSwitch } from "@/components/actor-switch";
+"use client";
+
+import { useEffect, useState } from "react";
 import { BottomNav } from "@/components/bottom-nav";
-import { ResetDataButton } from "@/components/reset-data-button";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { localService } from "@/lib/local/service";
+
+type SessionUser = ReturnType<typeof localService.getSessionUser>;
 
 export default function TabsLayout({
   children
 }: {
   children: React.ReactNode;
 }) {
+  const [user, setUser] = useState<SessionUser | null>(null);
+
+  useEffect(() => {
+    localService.initialize();
+    setUser(localService.getSessionUser());
+  }, []);
+
   return (
     <div className="mx-auto min-h-screen w-full max-w-[540px] px-4 pb-28 pt-4">
       <header className="mb-4 space-y-3">
@@ -19,9 +30,9 @@ export default function TabsLayout({
           <ThemeToggle />
         </div>
 
-        <div className="flex items-center justify-between gap-2">
-          <ActorSwitch />
-          <ResetDataButton />
+        <div className="glass rounded-2xl border px-3 py-2 text-xs text-muted">
+          Modo local sin login
+          {user ? ` · Usuario activo: ${user.name} (${user.role})` : ""}
         </div>
       </header>
 
