@@ -239,9 +239,6 @@ export default function RegisterPage() {
     <div className="space-y-4">
       <GlassCard>
         <h2 className="text-lg font-semibold">Registrar movimiento de yarda</h2>
-        <p className="mt-1 text-sm text-muted">
-          Seleccione Entrada o Salida, cargue la hora, y la fecha se toma automaticamente de hoy.
-        </p>
 
         <form onSubmit={onSubmit} className="mt-4 space-y-3">
           <label className="block text-sm text-muted">Camion</label>
@@ -333,13 +330,6 @@ export default function RegisterPage() {
               </>
             ) : null}
           </div>
-          {selectedTruck && !isTruckPickerOpen ? (
-            <p className="text-xs text-muted">
-              Seleccionado: {selectedTruck.truckNumber} · Odom {selectedTruck.currentOdometer} mi ·{" "}
-              {selectedTruck.currentWorkedHours} h
-            </p>
-          ) : null}
-
           <label className="block text-sm text-muted">Tipo de registro</label>
           <div className="grid grid-cols-2 gap-2">
             <button

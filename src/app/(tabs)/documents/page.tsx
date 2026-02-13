@@ -172,9 +172,6 @@ export default function DocumentsPage() {
           <div>
             <p className="text-xs uppercase tracking-[0.18em] text-muted">Documentos de camión</p>
             <h2 className="mt-1 text-xl font-semibold">Control de vencimientos</h2>
-            <p className="mt-1 text-sm text-muted">
-              Sube PDF y controla fechas de expiración en calendario.
-            </p>
           </div>
           <FileText className="text-primary" />
         </div>
