@@ -1,5 +1,5 @@
 import { Prisma, WorkOrderStatus } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/legacy/prisma";
 
 export async function getDashboardSummary() {
   const trucks = await prisma.truck.findMany({
@@ -42,8 +42,8 @@ export async function getDashboardSummary() {
   }
 
   const pendingOrders = trucks
-    .flatMap((t) =>
-      t.workOrders.map((wo) => ({
+    .flatMap((t: typeof trucks[0]) =>
+      t.workOrders.map((wo: typeof t.workOrders[0]) => ({
         id: wo.id,
         workorderNumber: wo.workorderNumber,
         truckNumber: t.truckNumber,
@@ -53,7 +53,7 @@ export async function getDashboardSummary() {
         createdAt: wo.createdAt
       }))
     )
-    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+    .sort((a: { createdAt: Date }, b: { createdAt: Date }) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
   return {
     totals: {

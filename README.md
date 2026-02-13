@@ -45,12 +45,13 @@ Aplicacion web mobile-first para control manual de mantenimiento de camiones con
    - [http://localhost:3000](http://localhost:3000)
 
 ## Sesion local actual
-- No hay pantalla de login.
+- Existe pantalla de login (`/login`) que funciona con autenticación local.
 - La app opera en modo local sobre `localStorage`.
 - Los usuarios seed se conservan en datos internos para roles/permisos:
-  - Admin: `admin@cst-manto.local`
-  - Operador: `yard@cst-manto.local`
-  - Mecanico: `mech@cst-manto.local`
+  - Admin: `admin@cst-manto.local` / `Admin#2026`
+  - Operador: `yard@cst-manto.local` / `Yard#2026`
+  - Mecanico: `mech@cst-manto.local` / `Mech#2026`
+- El login es opcional y los datos se almacenan localmente en el navegador.
 
 ## Notas
 - Los datos viven en el navegador/dispositivo.

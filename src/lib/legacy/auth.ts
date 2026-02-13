@@ -1,5 +1,5 @@
 import { UserRole } from "@prisma/client";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/legacy/prisma";
 
 export type Actor = {
   id: string;

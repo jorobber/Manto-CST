@@ -31,8 +31,8 @@ export default function TabsLayout({
         </div>
 
         <div className="glass rounded-2xl border px-3 py-2 text-xs text-muted">
-          Modo local sin login
-          {user ? ` · Usuario activo: ${user.name} (${user.role})` : ""}
+          Modo local · Datos en navegador
+          {user ? ` · Usuario: ${user.name} (${user.role})` : " · Sin sesión activa"}
         </div>
       </header>
 
