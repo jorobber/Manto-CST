@@ -18,8 +18,19 @@ function toMonthKey(date: Date) {
   return `${year}-${month}`;
 }
 
+function parseMonthKey(value: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return null;
+  return { year, monthIndex: month - 1 };
+}
+
 function monthLabel(monthKey: string) {
-  const date = new Date(`${monthKey}-01T00:00:00`);
+  const parsed = parseMonthKey(monthKey);
+  if (!parsed) return monthKey;
+  const date = new Date(parsed.year, parsed.monthIndex, 1);
   return new Intl.DateTimeFormat("es-AR", { month: "long", year: "numeric" }).format(date);
 }
 
@@ -91,9 +102,9 @@ export default function DocumentsPage() {
   }, [month]);
 
   const calendar = useMemo(() => {
-    const first = new Date(`${month}-01T00:00:00`);
-    const year = first.getFullYear();
-    const monthIndex = first.getMonth();
+    const parsed = parseMonthKey(month);
+    if (!parsed) return [];
+    const { year, monthIndex } = parsed;
     const firstWeekday = new Date(year, monthIndex, 1).getDay();
     const daysInMonth = new Date(year, monthIndex + 1, 0).getDate();
     const cells: Array<{ day: number | null; docs: DocumentsResponse["rows"] }> = [];
@@ -282,7 +293,7 @@ export default function DocumentsPage() {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Calendario de expiraciones</h3>
           <span className="inline-flex items-center gap-1 text-xs text-muted">
-            <CalendarClock size={13} /> {monthLabel(month)}
+            <CalendarClock size={13} /> {monthLabel(month)} · {(data?.rows ?? []).length} eventos
           </span>
         </div>
 
@@ -291,7 +302,9 @@ export default function DocumentsPage() {
             type="button"
             className="tap-target rounded-xl bg-white/55 px-3 py-2 text-xs text-muted dark:bg-slate-900/35"
             onClick={() => {
-              const d = new Date(`${month}-01T00:00:00`);
+              const parsed = parseMonthKey(month);
+              if (!parsed) return;
+              const d = new Date(parsed.year, parsed.monthIndex, 1);
               d.setMonth(d.getMonth() - 1);
               setMonth(toMonthKey(d));
             }}
@@ -302,7 +315,9 @@ export default function DocumentsPage() {
             type="button"
             className="tap-target rounded-xl bg-white/55 px-3 py-2 text-xs text-muted dark:bg-slate-900/35"
             onClick={() => {
-              const d = new Date(`${month}-01T00:00:00`);
+              const parsed = parseMonthKey(month);
+              if (!parsed) return;
+              const d = new Date(parsed.year, parsed.monthIndex, 1);
               d.setMonth(d.getMonth() + 1);
               setMonth(toMonthKey(d));
             }}
@@ -326,9 +341,14 @@ export default function DocumentsPage() {
             {calendar.map((cell, index) => (
               <div
                 key={`${cell.day ?? "x"}-${index}`}
-                className="min-h-[72px] rounded-2xl border border-white/40 bg-white/40 p-2 text-xs dark:border-white/10 dark:bg-slate-900/30"
+                className="relative min-h-[72px] rounded-2xl border border-white/40 bg-white/40 p-2 text-xs dark:border-white/10 dark:bg-slate-900/30"
               >
                 {cell.day ? <p className="font-medium">{cell.day}</p> : null}
+                {cell.day && cell.docs.length > 0 ? (
+                  <span className="absolute right-2 top-2 inline-flex min-w-5 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-semibold text-white">
+                    {cell.docs.length}
+                  </span>
+                ) : null}
                 <div className="mt-1 space-y-1">
                   {cell.docs.slice(0, 2).map((doc) => (
                     <motion.div

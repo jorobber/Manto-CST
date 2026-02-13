@@ -450,6 +450,28 @@ function classifyDocumentExpiration(expirationDate: string) {
   return { status: "VALID" as const, daysToExpiration };
 }
 
+function parseDateInputAsLocalNoon(value: string) {
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  if (month < 1 || month > 12 || day < 1 || day > 31) return null;
+  return new Date(year, month - 1, day, 12, 0, 0, 0);
+}
+
+function parseMonthKey(value: string) {
+  const match = /^(\d{4})-(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return null;
+  return {
+    monthStart: new Date(year, month - 1, 1).getTime(),
+    monthEnd: new Date(year, month, 0, 23, 59, 59, 999).getTime()
+  };
+}
+
 export const localService = {
   initialize() {
     const state = loadDbState();
@@ -550,9 +572,9 @@ export const localService = {
         throw new Error("Solo se permiten archivos PDF");
       }
 
-      const startDate = new Date(input.startDate);
-      const expirationDate = new Date(input.expirationDate);
-      if (Number.isNaN(startDate.getTime()) || Number.isNaN(expirationDate.getTime())) {
+      const startDate = parseDateInputAsLocalNoon(input.startDate);
+      const expirationDate = parseDateInputAsLocalNoon(input.expirationDate);
+      if (!startDate || !expirationDate) {
         throw new Error("Fechas inválidas");
       }
       if (endOfDayMs(expirationDate) < startOfDayMs(startDate)) {
@@ -603,11 +625,10 @@ export const localService = {
     let monthStart: number | undefined;
     let monthEnd: number | undefined;
     if (query?.month) {
-      const month = `${query.month}-01`;
-      const parsed = new Date(month);
-      if (!Number.isNaN(parsed.getTime())) {
-        monthStart = new Date(parsed.getFullYear(), parsed.getMonth(), 1).getTime();
-        monthEnd = new Date(parsed.getFullYear(), parsed.getMonth() + 1, 0, 23, 59, 59, 999).getTime();
+      const parsed = parseMonthKey(query.month);
+      if (parsed) {
+        monthStart = parsed.monthStart;
+        monthEnd = parsed.monthEnd;
       }
     }
 
